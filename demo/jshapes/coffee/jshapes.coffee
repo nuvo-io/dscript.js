@@ -1,7 +1,8 @@
 ###
-   jshapes is a web implementation of the "shapes" application used by DDS vendors to demonstrate interoperability.
-   That said this simple application tries to show how DDS can be effectively used to stream and render
-   real-time data in a web-browser.
+  jshapes is a web implementation of the "shapes" application used
+   by DDS vendors to demonstrate interoperability.  That said this
+   simple application tries to show how DDS can be effectively used to
+   stream and render real-time data in a web-browser.
 
    For information contact angelo@icorsaro.net
 ###
@@ -17,7 +18,27 @@ if (typeof exports isnt 'undefined')
 else
   root.jshapes = jshapes
 
-dds.VERSION = "0.1.0"
+dscriptServer = 'ws://192.168.0.38:9990'
+
+runtime = new dds.Runtime(dscriptServer)
+
+runtime.ondisconnect = (e) ->
+  sb = root.document.getElementById("subscribeBtn")
+  console.log("Enabling #{sb}")
+  sb.disabled = true
+  pb = root.document.getElementById("publishBtn")
+  pb.disabled = true
+  alert('Connection Failure! Please check your Internet connection')
+
+runtime.onconnect = () ->
+  sb = root.document.getElementById("subscribeBtn")
+  sb.disabled = false
+  pb = root.document.getElementById("publishBtn")
+  pb.disabled = false
+
+
+connect = () ->
+  runtime.connect(dsconf.dscriptServer)
 
 
 JShapesProperties =
@@ -319,20 +340,20 @@ publishTopic = () ->
 
   if (ts == 'Circle')
     if (circleDW is null)
-      circleDW  = new dds.DataWriter(circleTopic, dwQos)
+      circleDW  = new dds.DataWriter(runtime, circleTopic, dwQos)
       outCircleCache = new dds.Some(new dds.DataCache(1))
     outCircleCache.map((c) -> c.write(color, shape))
 
 
   else if (ts == 'Square')
     if (squareDW is null)
-      squareDW  = new dds.DataWriter(squareTopic, dwQos)
+      squareDW  = new dds.DataWriter(runtime, squareTopic, dwQos)
       outSquareCache = new dds.Some(new dds.DataCache(1))
     outSquareCache.map((c) -> c.write(color, shape))
 
   else if (ts == "Triangle")
     if (triangleDW is null)
-      triangleDW = new dds.DataWriter(triangleTopic, dwQos)
+      triangleDW = new dds.DataWriter(runtime, triangleTopic, dwQos)
       outTriangleCache = new dds.Some(new dds.DataCache(1))
     outTriangleCache.map((c) -> c.write(color, shape))
 
@@ -343,19 +364,19 @@ subscribeTopic = () ->
   history = JShapesProperties.shapeHistory()
 
   if (ts == "Circle" and circleDR is null)
-    circleDR = new dds.DataReader(circleTopic, drQos)
+    circleDR = new dds.DataReader(runtime, circleTopic, drQos)
     inCircleCache = new dds.Some(new dds.DataCache(history))
     inCircleCache.map((c) -> bindShape(circleDR, c))
 
 
   else if (ts == "Square" and squareDR is null)
-    squareDR = new dds.DataReader(squareTopic, drQos)
+    squareDR = new dds.DataReader(runtime, squareTopic, drQos)
     inSquareCache = new dds.Some(new dds.DataCache(history))
     inSquareCache.map((c) -> bindShape(squareDR, c))
 
 
   else if (ts == "Triangle" and triangleDR is null)
-    triangleDR = new dds.DataReader(triangleTopic, drQos)
+    triangleDR = new dds.DataReader(runtime, triangleTopic, drQos)
     inTriangleCache = new dds.Some(new dds.DataCache(history))
     inTriangleCache.map((c) -> bindShape(triangleDR, c))
 
@@ -367,4 +388,5 @@ this.animate = animate
 this.runJShapes = runJShapes
 this.publishTopic = publishTopic
 this.subscribeTopic = subscribeTopic
+this.connect = connect
 this.window.onload = () -> runJShapes()

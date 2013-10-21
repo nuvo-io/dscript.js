@@ -1,6 +1,5 @@
-###
- This file defines the CoffeeScript API for DDS
-###
+# dscript is a CoffeeScript API for DDS. This API allows web-app to share data in real-time among themselves
+# and with native DDS applications.
 
 root = this
 
@@ -15,6 +14,7 @@ else
 
 dds.VERSION = "0.1.0"
 
+# `Option` monad implementation.
 None = {}
 None.map = (f) -> None
 None.flatMap = (f) -> None
@@ -32,13 +32,39 @@ class Some
   orElse: (f) -> this
   isEmpty: () -> false
 
+# `Try` monad implementation.
+class Success
+  constructor: (@value) ->
+  map: (f) -> f(@value)
+  get: () -> @value
+  getOrElse: (f) -> @value
+  orElse: (f) -> this
+  isFailure: () -> false
+  isSuccess: () -> true
+  toOption: () -> new Some(@value)
+  recover: (f) -> this
+
+class Failure
+  constructor: (@exception) ->
+  map: (f) -> None
+  get: () -> @exception
+  getOrElse: (f) -> f()
+  orElse: (f) -> f()
+  isFailure: () -> true
+  isSuccess: () -> false
+  toOption: () -> None
+  recover: (f) -> f(@exception)
+
 class Topic
   constructor: (@did, @tname, @ttype) ->
 
+
 class DataReader
-  constructor: (@topic, @qos) ->
+  constructor: (@runtime, @topic, @qos) ->
     @handlers = []
-    dds.ddscriptRuntime.createDataReaderConnection(topic, qos, this)
+    @runtime.openDataReaderConnection(topic, qos, this)
+    @onclose = () ->
+    @closed = false
 
   ## Attaches a listener to this data reader
   addListener: (l) ->
@@ -46,19 +72,35 @@ class DataReader
     @handlers = @handlers.concat(l)
     idx
 
-  removeListener: (idx) ->
+  removeListener: (idx) =>
     h = @handlers
     @handlers = h.slice(0, idx).concat(h.slice(idx+1, h.length))
 
-  socketDataHandler: (m) =>
+  onDataAvailable: (m) =>
     s = m.data
     d = JSON.parse(s)
     @handlers.forEach((h) -> h(d))
 
+  socketCloseHandler: (m) =>
+    @closed = true
+    onclose()
+
+  close: () =>
+    console.log("Closing DR #{this}")
+    @closed = true
+    @runtime.closeDataReaderConnection(this)
+    onclose()
+
+  isClosed: () => @closed
+
+
 class DataWriter
-  constructor: (@topic, @qos) ->
+  constructor: (@runtime, @topic, @qos) ->
     @socket = dds.None
-    dds.ddscriptRuntime.createDataWriterConnection(topic, qos, this)
+    @runtime.openDataWriterConnection(topic, qos, this)
+    @onclose = () ->
+    @closed = false
+
 
   write: (ds...) ->
     @socket.map (
@@ -73,6 +115,13 @@ class DataWriter
         ds.forEach(sendData)
     )
 
+  close: () ->
+    console.log("Closing DW #{this}")
+    @closed = true
+    @runtime.closeDataWriterConnection(this)
+    onclose()
+
+  isClosed: () -> @closed
 
 class DataCache
   constructor: (@depth, @cache) -> if (@cache? == false) then @cache = {}
@@ -115,11 +164,11 @@ class DataCache
       result = result.concat(v)
     result
 
-  takeWhile: (f) ->
+  takeWithFilter: (f) ->
     result = []
     for k, v of @cache
-      tv = e for e in v when f(v)
-      rv = e for e in v when not f(v)
+      tv = e for e in v when f(e)
+      rv = e for e in v when not f(e)
       result = result.concat(tv)
       @cache[k] = rv
     result
@@ -143,10 +192,6 @@ class DataCache
 root.dds.bind = (key) -> (reader, cache) ->
   reader.addListener((d) -> cache.write(key(d), d))
 
-root.dds.bindWithFun = (key) -> (fun) -> (reader, cache) ->
-  reader.addListener((d) ->
-    fun(cache)
-    cache.write(key(d), d))
 
 root.dds.Topic = Topic
 root.dds.DataReader = DataReader
@@ -154,6 +199,8 @@ root.dds.DataWriter = DataWriter
 root.dds.DataCache = DataCache
 root.dds.None = None
 root.dds.Some = Some
+root.dds.Success = Success
+root.dds.Failure = Failure
 
 ###
   Protocol
@@ -331,35 +378,143 @@ root.dds.ContentFilter = ContentFilter
 root.dds.DataReaderQos = EntityQos
 root.dds.DataWriterQos = EntityQos
 
-###
-  Runtime
-###
 
+# Resource paths
+controllerPath = '/dscript/controller'
+readerPrefixPath = '/dscript/reader'
+writerPrefixPath = '/dscript/writer'
+
+controllerURL = (dscriptServer) ->   dscriptServer + controllerPath
+readerPrefixURL = (dscriptServer) ->  dscriptServer + readerPrefixPath
+writerPrefixURL = (dscriptServer) ->  dscriptServer + writerPrefixPath
+
+# The `Runtime` maintains the connection with the server, re-establish the connection if dropped and mediates
+# the `DataReader` and `DataWriter` communication.
 class Runtime
-  constructor: (@controllerURL, @readerURLPrefix, @writerURLPrefix) ->
+  # Creates a new DDS runtime
+  constructor: (@server) ->
     @sn = 0
     @drmap = {}
     @dwmap = {}
+    @drconnections = {}
+    @dwconnections = {}
+    @onclose = (evt) ->
+    @onconnect = () ->
+    @ondisconnect = (evt) ->
+    @connected = false
+    @closed = true
 
-    console.log("Connecting to: #{@controllerURL}")
-    @ctrlSock = new WebSocket(@controllerURL)
-    @ctrlSock.onmessage = (msg) => this.handleMessage(msg)
 
 
-  createDataReaderConnection: (topic, qos, dr) =>
+  # Establish a connection with the dscript.play server
+  connect: () =>
+    if @connected is false
+      url = controllerURL(@server)
+      console.log("Connecting to: #{url}")
+      @ctrlSock = None
+      @webSocket = new WebSocket(url)
+      @pendingCtrlSock = new Some(@webSocket)
+
+      @pendingCtrlSock.map (
+        (s) =>
+          s.onopen = () =>
+            console.log('Connected to: ' + @server)
+            @ctrlSock = @pendingCtrlSock
+            @connected = true
+            # We may need to re-establish dropped data connection, if this connection is following
+            # a disconnection.
+            console.log("Calling @establishDroppedDataConnections()")
+            @establishDroppedDataConnections()
+            @onconnect()
+      )
+
+      @pendingCtrlSock.map (
+        (s) => s.onclose =
+          (evt) =>
+            console.log("The  #{@server} seems to have dropped the connection.")
+            @connected = false
+            @closed = false
+            @ctrlSock = None
+            @ondisconnect(evt)
+      )
+
+
+      @pendingCtrlSock.map (
+        (s) =>
+          s.onmessage = (msg) =>
+            this.handleMessage(msg)
+      )
+    else
+      console.log("Warning: Trying to connect an already connected Runtime")
+
+  # Re-establish connections that had been dropped due to a temporary network connectivity loss
+  # or a server failure.
+  establishDroppedDataConnections: () =>
+    console.log("In @establishDroppedDataConnections()")
+
+    for k, v of @drconnections
+      console.log("Establishing dropped connection for data-reader")
+      if v.sock.readyState is v.sock.CLOSED
+        @openDataReaderConnection(v.dr.topic, v.dr.qos, v.dr)
+
+    for k, v of @dwconnections
+      console.log("Establishing dropped connection for data-writer")
+      if v.sock.readyState is v.sock.CLOSED
+        @openDataWriterConnection(v.dw.topic, v.dw.qos, v.dw)
+
+
+
+  # Close the DDS runtime and as a consequence all the `DataReaders` and `DataWriters` that belong to this runtime.
+  close: () =>
+    @ctrlSock.map (
+      (s) =>
+        s.close()
+        this.onclose()
+    )
+    for k, v of @drconnections
+      v.sock.close()
+      v.dr.close()
+
+
+    for k, v of @dwconnections
+      v.sock.close()
+      v.dw.close()
+
+
+  isConnected: () => @connected
+
+  isClosed: () => @closed
+
+
+  openDataReaderConnection: (topic, qos, dr) =>
     cmd = dds.createDataReaderCommand(@sn, topic, qos)
     @drmap[@sn] = dr
     @sn = @sn + 1
     scmd = JSON.stringify(cmd)
-    @ctrlSock.send(scmd)
+    @ctrlSock.map((s) -> s.send(scmd))
 
-  createDataWriterConnection: (topic, qos, dw) =>
+  closeDataReaderConnection: (dr) =>
+    sock = @drconnection[dr]
+    if (sock not undefined)
+      sock.close()
+      delete @drconnection[dr]
+
+  closeDataWriterConnection: (dw) =>
+    console.log("Called closeDataWriterConnection()")
+    sock = @dwconnections[dw]
+    if (sock not undefined)
+      sock.close()
+      delete @dwconnections[dw]
+
+
+  openDataWriterConnection: (topic, qos, dw) =>
     cmd = dds.createDataWriterCommand(@sn, topic, qos)
     @dwmap[@sn] = dw
     @sn = @sn + 1
     scmd = JSON.stringify(cmd)
-    @ctrlSock.send(scmd)
-
+    console.log("Creating Data Writer on #{@ctrlSock.get()}")
+    @ctrlSock.map((s) -> s.send(scmd))
+    console.log("Command sent: #{cmd}")
 
   handleMessage: (s) =>
     console.log('received'+ s.data)
@@ -367,20 +522,33 @@ class Runtime
     if (msg.h.cid == DSCommandId.OK)
       if (msg.h.ek == DSEntityKind.DataReader)
         eid = msg.b.eid
-        url = @readerURLPrefix + '/' + eid
+        url = readerPrefixURL(@server) + '/' + eid
         dr = @drmap[msg.h.sn]
         drsock = new WebSocket(url)
-        drsock.onmessage = dr.socketDataHandler
+        drsock.onmessage = dr.onDataAvailable
+        drsock.onclose = dr.onclose()
         delete @drmap[msg.h.sn]
+        drc = dr: dr, sock: drsock
+        @drconnections[dr] = drc
+
       else if (msg.h.ek == DSEntityKind.DataWriter)
         eid = msg.b.eid
-        url = @writerURLPrefix + '/' + eid
+        url = writerPrefixURL(@server) + '/' + eid
         dw = @dwmap[msg.h.sn]
         dwsock = new WebSocket(url)
-        dw.socket = new dds.Some(dwsock)
+        dwsock.onclose = (evt) ->
+          dw.socket = new dds.Failure(evt)
+          dw.onclose()
+
+        dw.socket = new dds.Success(dwsock)
         delete @dwmap[msg.h.sn]
+        dwc = dw: dw, sock: dwsock
+        @dwconnections[dw] = dwc
+
     if (msg.h.cid == DSCommandId.Error)
       throw (msg.b.msg)
 
-root.dds.ddscriptRuntime = new Runtime(dsconf.controllerURL, dsconf.readerPrefixURL, dsconf.writerPrefixURL)
+
+
+
 root.dds.Runtime = Runtime

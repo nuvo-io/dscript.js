@@ -9,8 +9,8 @@
     <link rel="apple-touch-icon" href="images/index.png" >
 
     <script src="../../lib/dsconf.js" type="text/javascript"></script>
-    <script src="../../lib/dscript-min.js" type="text/javascript"></script>
-    <script src="javascripts/jshapes-min.js" type="text/javascript"></script>
+    <script src="../../lib/dscript.js" type="text/javascript"></script>
+    <script src="javascripts/jshapes.js" type="text/javascript"></script>
 </head>
 
 <body style="border-width: 0px;">
@@ -161,8 +161,11 @@
         <article>
             <canvas id="iShapeCanvas" width="501" height="361" style="border: 1px solid"></canvas>
             <p align="center">
-                <button onclick="subscribeTopic()">Subscribe</button>
-                <button onclick="publishTopic()"> Publish </button>
+                <button id="subscribeBtn" onclick="subscribeTopic()" disabled="true">Subscribe</button>
+                <button id="publishBtn" onclick="publishTopic()" disabled="true"> Publish </button>
+            </p>
+            <p align="right">
+                <button id="connectBtn" onclick="connect()"> Connect</button>
             </p>
         </article>
     </section>

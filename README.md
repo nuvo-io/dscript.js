@@ -7,5 +7,5 @@ integrate with DDS.
 To learn how to use dscript.js check out the jshapes example in the
 demo directory.
 
-For any questions feel free to contact me at ac@nuvo.io
+For any questions feel free to contact me at io@nuvo.io
 
