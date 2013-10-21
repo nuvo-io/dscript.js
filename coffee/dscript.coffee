@@ -32,6 +32,16 @@ class Some
   orElse: (f) -> this
   isEmpty: () -> false
 
+
+class Fail
+  constructor: (@what) ->
+  map: (f)  -> throw @what
+  flatMap: (f) -> throw @what
+  get: () -> throw @what
+  getOrElse: (f) -> throw @what
+  orElse: (f) -> throw @what
+  isEmpty: () -> throw @what
+
 # `Try` monad implementation.
 class Success
   constructor: (@value) ->
@@ -59,12 +69,23 @@ class Topic
   constructor: (@did, @tname, @ttype) ->
 
 
+# A `DataReader` allows to read data for a given topic with a specific QoS.
+# A `DataReader` goes through different states, it is intially disconnected and changes to the connected
+# state when the underlying transport connection is successfully established with the server.
+# At this point a `DataReader` can be explicitely closed or disconnected. A disconnection can happen
+# as the result of a network failure or server failure. Disconnection and reconnections are managed by the
+# runtime.
 class DataReader
   constructor: (@runtime, @topic, @qos) ->
     @handlers = []
     @runtime.openDataReaderConnection(topic, qos, this)
     @onclose = () ->
     @closed = false
+    @onconnect = () ->
+    @ondisconnect = () ->
+    @connected = false
+    @eid = @runtime.generateEntityId()
+
 
   ## Attaches a listener to this data reader
   addListener: (l) ->
@@ -81,25 +102,29 @@ class DataReader
     d = JSON.parse(s)
     @handlers.forEach((h) -> h(d))
 
-  socketCloseHandler: (m) =>
-    @closed = true
-    onclose()
-
   close: () =>
     console.log("Closing DR #{this}")
     @closed = true
     @runtime.closeDataReaderConnection(this)
-    onclose()
-
-  isClosed: () => @closed
+    @onclose()
 
 
+# A `DataWriter` allows to read data for a given topic with a specific QoS.
+# A `DataWriter` goes through different states, it is intially disconnected and changes to the connected
+# state when the underlying transport connection is successfully established with the server.
+# At this point a `DataWriter` can be explicitely closed or disconnected. A disconnection can happen
+# as the result of a network failure or server failure. Disconnection and reconnections are managed by the
+# runtime.
 class DataWriter
   constructor: (@runtime, @topic, @qos) ->
     @socket = dds.None
     @runtime.openDataWriterConnection(topic, qos, this)
     @onclose = () ->
     @closed = false
+    @onconnect = () ->
+    @ondisconnect = () ->
+    @connected = false
+    @eid = @runtime.generateEntityId()
 
 
   write: (ds...) ->
@@ -110,18 +135,16 @@ class DataWriter
           try
             s.send(xs)
           catch e
-            console.log(e)
+            console.log("Exception while sending data #{e}")
 
         ds.forEach(sendData)
     )
 
   close: () ->
-    console.log("Closing DW #{this}")
     @closed = true
+    @socket = new Fail("Invalid State Exception: Can't write on a closed DataWriter")
     @runtime.closeDataWriterConnection(this)
-    onclose()
-
-  isClosed: () -> @closed
+    @onclose()
 
 class DataCache
   constructor: (@depth, @cache) -> if (@cache? == false) then @cache = {}
@@ -186,6 +209,9 @@ class DataCache
     for k, v of @cache
       r = r + v.reduceRight(f)
     r
+
+  clear: () =>
+    @cache = {}
 
 
 ## Binds a reader to a cache
@@ -403,8 +429,13 @@ class Runtime
     @ondisconnect = (evt) ->
     @connected = false
     @closed = true
+    @eidCount = 0
 
 
+  generateEntityId: () ->
+    id = @eidCount
+    @eidCount += 1
+    id
 
   # Establish a connection with the dscript.play server
   connect: () =>
@@ -423,7 +454,7 @@ class Runtime
             @connected = true
             # We may need to re-establish dropped data connection, if this connection is following
             # a disconnection.
-            console.log("Calling @establishDroppedDataConnections()")
+            console.log("Re-establishing dropped connection -- if needed")
             @establishDroppedDataConnections()
             @onconnect()
       )
@@ -450,18 +481,33 @@ class Runtime
   # Re-establish connections that had been dropped due to a temporary network connectivity loss
   # or a server failure.
   establishDroppedDataConnections: () =>
-    console.log("In @establishDroppedDataConnections()")
-
     for k, v of @drconnections
-      console.log("Establishing dropped connection for data-reader")
       if v.sock.readyState is v.sock.CLOSED
+        console.log("Establishing dropped connection for data-reader")
         @openDataReaderConnection(v.dr.topic, v.dr.qos, v.dr)
 
     for k, v of @dwconnections
-      console.log("Establishing dropped connection for data-writer")
       if v.sock.readyState is v.sock.CLOSED
+        console.log("Establishing dropped connection for data-writer")
         @openDataWriterConnection(v.dw.topic, v.dw.qos, v.dw)
 
+
+  # Disconnects, withouth closing, a `Runtime`. Notice that there is a big difference between disconnecting and
+  # closing a `Runtime`. The a disconnected `Runtime` can be reconnected and retains state across
+  # connection/disconnections. On the other hand, once closed a `Runtime` clears up all current state.
+  disconnect: () =>
+    @connected = false
+    @ctrlSock.map(
+      (s) -> s.close()
+    )
+
+    for k, v of @drconnections
+      v.sock.close() # the onclose will call the ondisconnect
+
+    for k, v of @dwconnections
+      v.sock.close() # the onclose will call the ondisconnect
+
+    @ondisconnect()
 
 
   # Close the DDS runtime and as a consequence all the `DataReaders` and `DataWriters` that belong to this runtime.
@@ -472,12 +518,10 @@ class Runtime
         this.onclose()
     )
     for k, v of @drconnections
-      v.sock.close()
       v.dr.close()
 
 
     for k, v of @dwconnections
-      v.sock.close()
       v.dw.close()
 
 
@@ -494,17 +538,16 @@ class Runtime
     @ctrlSock.map((s) -> s.send(scmd))
 
   closeDataReaderConnection: (dr) =>
-    sock = @drconnection[dr]
-    if (sock not undefined)
+    {dr, sock} = @drconnections[dr.eid]
+    if (sock isnt undefined)
       sock.close()
-      delete @drconnection[dr]
+      delete @drconnections[dr.eid]
 
   closeDataWriterConnection: (dw) =>
-    console.log("Called closeDataWriterConnection()")
-    sock = @dwconnections[dw]
-    if (sock not undefined)
+    {dw, sock} = @dwconnections[dw.eid]
+    if (sock isnt undefined)
       sock.close()
-      delete @dwconnections[dw]
+      delete @dwconnections[dw.eid]
 
 
   openDataWriterConnection: (topic, qos, dw) =>
@@ -526,24 +569,36 @@ class Runtime
         dr = @drmap[msg.h.sn]
         drsock = new WebSocket(url)
         drsock.onmessage = dr.onDataAvailable
-        drsock.onclose = dr.onclose()
+
+        drsock.onclose = (evt) ->
+          dr.connected = false
+          dr.ondisconnect(evt)
+
         delete @drmap[msg.h.sn]
         drc = dr: dr, sock: drsock
-        @drconnections[dr] = drc
+        @drconnections[dr.eid] = drc
+        dr.connected = true
+        dr.onconnect()
 
       else if (msg.h.ek == DSEntityKind.DataWriter)
         eid = msg.b.eid
         url = writerPrefixURL(@server) + '/' + eid
         dw = @dwmap[msg.h.sn]
         dwsock = new WebSocket(url)
+
         dwsock.onclose = (evt) ->
           dw.socket = new dds.Failure(evt)
-          dw.onclose()
+          dw.connected = false
+          dw.ondisconnect(evt)
+
 
         dw.socket = new dds.Success(dwsock)
         delete @dwmap[msg.h.sn]
         dwc = dw: dw, sock: dwsock
-        @dwconnections[dw] = dwc
+        @dwconnections[dw.eid] = dwc
+        dw.connected = true
+        dw.onconnect()
+
 
     if (msg.h.cid == DSCommandId.Error)
       throw (msg.b.msg)

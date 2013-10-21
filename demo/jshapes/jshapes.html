@@ -159,32 +159,24 @@
 
     <section>
         <article>
-            <canvas id="iShapeCanvas" width="501" height="361" style="border: 1px solid"></canvas>
-            <p align="center">
-                <button id="subscribeBtn" onclick="subscribeTopic()" disabled="true">Subscribe</button>
-                <button id="publishBtn" onclick="publishTopic()" disabled="true"> Publish </button>
-            </p>
-            <p align="right">
+            <div align="right">
                 <button id="connectBtn" onclick="connect()"> Connect</button>
-            </p>
+            </div>
+            <canvas id="iShapeCanvas" width="501" height="361" style="border: 1px solid"></canvas>
+            <table width="501px">
+                <tr>
+                    <td width="160px" align="center"></td>
+                    <td width="181" align="center">
+                        <button id="subscribeBtn" onclick="subscribeTopic()" disabled="true">Subscribe</button>
+                        <button id="publishBtn" onclick="publishTopic()" disabled="true"> Publish </button>
+                    </td>
+                    <td width="160px" align="right">
+                        <button id="clearTPSBtn" onclick="clearTopicPubSub()" disabled="true"> Clear </button>
+                    </td>
+                </tr>
+            </table>
         </article>
     </section>
-
-    <!--
-        | No QoS support yet
-    <aside>
-          <fieldset>
-            <legend>QoS Settings</legend>
-            <label> SetMeUp</label>
-          </fieldset>
-
-    </aside>
-    -->
-    <!--
-    <footer>
-       OpenSplice | DDS
-    </footer>
-    -->
 
 </div>
 </body>

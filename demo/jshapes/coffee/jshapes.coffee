@@ -35,10 +35,33 @@ runtime.onconnect = () ->
   sb.disabled = false
   pb = root.document.getElementById("publishBtn")
   pb.disabled = false
+  cb = root.document.getElementById("connectBtn")
+  cb.innerHTML = " Disconnect"
+  cb.onclick = disconnect
+  clrb = root.document.getElementById("clearTPSBtn")
+  clrb.disabled = false
 
+
+runtime.ondisconnect = () ->
+  cb = root.document.getElementById("connectBtn")
+  cb.innerHTML = " Connect"
+  cb.onclick = connect
 
 connect = () ->
   runtime.connect(dsconf.dscriptServer)
+
+disconnect = () ->
+  runtime.disconnect()
+
+
+clearTopicPubSub = () ->
+  sub = JShapesProperties.shapeTopic()
+  switch sub
+    when "Circle" then clearCircles()
+    when "Square" then clearSquares()
+    when "Triangle" then clearTriangles()
+
+
 
 
 JShapesProperties =
@@ -384,9 +407,36 @@ subscribeTopic = () ->
 runJShapes = () ->
   setInterval("animate()", JShapesProperties.refresh)
 
+
+clearPS = (r, rc, w, wc) ->
+  if r isnt null
+    r.close()
+  if w isnt null
+    w.close()
+  rc = dds.None
+  wc = dds.None
+
+clearCircles = () ->
+  clearPS(circleDR, inCircleCache, circleDW, outCircleCache)
+  circleDR = circleDW  = null
+  inCircleCache = outCircleCache = dds.None
+
+clearSquares = () ->
+  clearPS(squareDR, inSquareCache, squareDW, outSquareCache)
+  squareDR = squareDW = null
+  inSquareCache = outSquareCache = dds.None
+
+clearTriangles = () ->
+  clearPS(triangleDR, inTriangleCache, squareDW, outTriangleCache)
+  triangleDR = triangleDW = null
+  inTriangleCache = outTriangleCache = dds.None
+
 this.animate = animate
 this.runJShapes = runJShapes
 this.publishTopic = publishTopic
 this.subscribeTopic = subscribeTopic
 this.connect = connect
+this.disconnect = disconnect
+this.clearTopicPubSub = clearTopicPubSub
 this.window.onload = () -> runJShapes()
+

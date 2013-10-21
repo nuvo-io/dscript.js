@@ -10,7 +10,7 @@
 
 
 (function() {
-  var JShapesProperties, Shape, ShapeColor, animate, bindShape, bouncingCircles, bouncingDynamic, bouncingSquares, bouncingTriangles, circleBBox, circleDR, circleDW, circleTopic, colorMap, connect, drawCircle, drawSquare, drawTriangle, drawTriangleShape, drqos, dscriptServer, dwqos, exports, inCircleCache, inSquareCache, inTriangleCache, jshapes, outCircleCache, outSquareCache, outTriangleCache, publishTopic, randomShape, root, runJShapes, runtime, squareBBox, squareDR, squareDW, squareTopic, stripShape, subscribeTopic, triangleBBox, triangleDR, triangleDW, triangleTopic,
+  var JShapesProperties, Shape, ShapeColor, animate, bindShape, bouncingCircles, bouncingDynamic, bouncingSquares, bouncingTriangles, circleBBox, circleDR, circleDW, circleTopic, clearCircles, clearPS, clearSquares, clearTopicPubSub, clearTriangles, colorMap, connect, disconnect, drawCircle, drawSquare, drawTriangle, drawTriangleShape, drqos, dscriptServer, dwqos, exports, inCircleCache, inSquareCache, inTriangleCache, jshapes, outCircleCache, outSquareCache, outTriangleCache, publishTopic, randomShape, root, runJShapes, runtime, squareBBox, squareDR, squareDW, squareTopic, stripShape, subscribeTopic, triangleBBox, triangleDR, triangleDW, triangleTopic,
     _this = this;
 
   root = this;
@@ -41,15 +41,44 @@
   };
 
   runtime.onconnect = function() {
-    var pb, sb;
+    var cb, clrb, pb, sb;
     sb = root.document.getElementById("subscribeBtn");
     sb.disabled = false;
     pb = root.document.getElementById("publishBtn");
-    return pb.disabled = false;
+    pb.disabled = false;
+    cb = root.document.getElementById("connectBtn");
+    cb.innerHTML = " Disconnect";
+    cb.onclick = disconnect;
+    clrb = root.document.getElementById("clearTPSBtn");
+    return clrb.disabled = false;
+  };
+
+  runtime.ondisconnect = function() {
+    var cb;
+    cb = root.document.getElementById("connectBtn");
+    cb.innerHTML = " Connect";
+    return cb.onclick = connect;
   };
 
   connect = function() {
     return runtime.connect(dsconf.dscriptServer);
+  };
+
+  disconnect = function() {
+    return runtime.disconnect();
+  };
+
+  clearTopicPubSub = function() {
+    var sub;
+    sub = JShapesProperties.shapeTopic();
+    switch (sub) {
+      case "Circle":
+        return clearCircles();
+      case "Square":
+        return clearSquares();
+      case "Triangle":
+        return clearTriangles();
+    }
   };
 
   JShapesProperties = {
@@ -520,6 +549,35 @@
     return setInterval("animate()", JShapesProperties.refresh);
   };
 
+  clearPS = function(r, rc, w, wc) {
+    if (r !== null) {
+      r.close();
+    }
+    if (w !== null) {
+      w.close();
+    }
+    rc = dds.None;
+    return wc = dds.None;
+  };
+
+  clearCircles = function() {
+    clearPS(circleDR, inCircleCache, circleDW, outCircleCache);
+    circleDR = circleDW = null;
+    return inCircleCache = outCircleCache = dds.None;
+  };
+
+  clearSquares = function() {
+    clearPS(squareDR, inSquareCache, squareDW, outSquareCache);
+    squareDR = squareDW = null;
+    return inSquareCache = outSquareCache = dds.None;
+  };
+
+  clearTriangles = function() {
+    clearPS(triangleDR, inTriangleCache, squareDW, outTriangleCache);
+    triangleDR = triangleDW = null;
+    return inTriangleCache = outTriangleCache = dds.None;
+  };
+
   this.animate = animate;
 
   this.runJShapes = runJShapes;
@@ -529,6 +587,10 @@
   this.subscribeTopic = subscribeTopic;
 
   this.connect = connect;
+
+  this.disconnect = disconnect;
+
+  this.clearTopicPubSub = clearTopicPubSub;
 
   this.window.onload = function() {
     return runJShapes();
