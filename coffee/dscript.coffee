@@ -1,6 +1,7 @@
 # dscript is a CoffeeScript API for DDS. This API allows web-app to share data in real-time among themselves
 # and with native DDS applications.
 
+# TODO: Add support for default QoS on DW/DR creation
 root = this
 
 dds = {}
@@ -378,10 +379,7 @@ Durability =
 ###
 class EntityQos
   constructor: (p, ps...) ->
-    console.log(p)
-    console.log(ps)
     @policies =  ps.concat(p)
-    console.log(@policies)
 
   add: (p...) -> new EntityQos(@policies.concat(p))
 
@@ -555,7 +553,7 @@ class Runtime
     @dwmap[@sn] = dw
     @sn = @sn + 1
     scmd = JSON.stringify(cmd)
-    console.log("Creating Data Writer on #{@ctrlSock.get()}")
+    console.log("Creating Data Writer on #{@ctrlSock}")
     @ctrlSock.map((s) -> s.send(scmd))
     console.log("Command sent: #{cmd}")
 
@@ -602,8 +600,6 @@ class Runtime
 
     if (msg.h.cid == DSCommandId.Error)
       throw (msg.b.msg)
-
-
 
 
 root.dds.Runtime = Runtime

@@ -62,8 +62,6 @@ clearTopicPubSub = () ->
     when "Triangle" then clearTriangles()
 
 
-
-
 JShapesProperties =
   logo:
     img: new Image()

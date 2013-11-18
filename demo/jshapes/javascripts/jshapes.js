@@ -10,7 +10,7 @@
 
 
 (function() {
-  var JShapesProperties, Shape, ShapeColor, animate, bindShape, bouncingCircles, bouncingDynamic, bouncingSquares, bouncingTriangles, circleBBox, circleDR, circleDW, circleTopic, clearCircles, clearPS, clearSquares, clearTopicPubSub, clearTriangles, colorMap, connect, disconnect, drawCircle, drawSquare, drawTriangle, drawTriangleShape, drqos, dscriptServer, dwqos, exports, inCircleCache, inSquareCache, inTriangleCache, jshapes, outCircleCache, outSquareCache, outTriangleCache, publishTopic, randomShape, root, runJShapes, runtime, squareBBox, squareDR, squareDW, squareTopic, stripShape, subscribeTopic, triangleBBox, triangleDR, triangleDW, triangleTopic,
+  var JShapesProperties, Shape, ShapeColor, animate, bindShape, bouncingCircles, bouncingDynamic, bouncingSquares, bouncingTriangles, circleBBox, circleDR, circleDW, circleTopic, clearCircles, clearPS, clearSquares, clearTopicPubSub, clearTriangles, colorMap, connect, disconnect, drawCircle, drawSquare, drawTriangle, drawTriangleShape, drqos, dscriptServer, dwqos, exports, inCircleCache, inSquareCache, inTriangleCache, jshapes, outCircleCache, outSquareCache, outTriangleCache, publishTopic, randomShape, registerCanvasEvents, root, runJShapes, runtime, squareBBox, squareDR, squareDW, squareTopic, stripShape, subscribeTopic, triangleBBox, triangleDR, triangleDW, triangleTopic,
     _this = this;
 
   root = this;
@@ -80,6 +80,22 @@
         return clearTriangles();
     }
   };
+
+  registerCanvasEvents = function() {
+    var canvas;
+    canvas = root.document.getElementById("iShapeCanvas");
+    canvas.onmousedown = function(e) {
+      return console.log("Mouse down event " + e);
+    };
+    canvas.onmousemove = function(e) {
+      return console.log("Mouse move event " + e);
+    };
+    return canvas.onmouseup = function(e) {
+      return console.log("Mouse up event " + e);
+    };
+  };
+
+  registerCanvasEvents();
 
   JShapesProperties = {
     logo: {
