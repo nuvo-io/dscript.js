@@ -8,9 +8,9 @@
     <link rel="shortcut icon" type="image/png" href="images/favicon.png">
     <link rel="apple-touch-icon" href="images/index.png" >
 
-    <script src="./lib/dsconf.js" type="text/javascript"></script>
-    <script src="./lib/dscript-min.js" type="text/javascript"></script>
-    <script src="lib/jshapes-min.js" type="text/javascript"></script>
+    <script src="../../lib/dsconf.js" type="text/javascript"></script>
+    <script src="../../lib/dscript.js" type="text/javascript"></script>
+    <script src="javascripts/jshapes.js" type="text/javascript"></script>
 </head>
 
 <body style="border-width: 0px;">
@@ -159,29 +159,24 @@
 
     <section>
         <article>
+            <div align="right">
+                <button id="connectBtn" onclick="connect()"> Connect</button>
+            </div>
             <canvas id="iShapeCanvas" width="501" height="361" style="border: 1px solid"></canvas>
-            <p align="center">
-                <button onclick="subscribeTopic()">Subscribe</button>
-                <button onclick="publishTopic()"> Publish </button>
-            </p>
+            <table width="501px">
+                <tr>
+                    <td width="160px" align="center"></td>
+                    <td width="181" align="center">
+                        <button id="subscribeBtn" onclick="subscribeTopic()" disabled="true">Subscribe</button>
+                        <button id="publishBtn" onclick="publishTopic()" disabled="true"> Publish </button>
+                    </td>
+                    <td width="160px" align="right">
+                        <button id="clearTPSBtn" onclick="clearTopicPubSub()" disabled="true"> Clear </button>
+                    </td>
+                </tr>
+            </table>
         </article>
     </section>
-
-    <!--
-        | No QoS support yet
-    <aside>
-          <fieldset>
-            <legend>QoS Settings</legend>
-            <label> SetMeUp</label>
-          </fieldset>
-
-    </aside>
-    -->
-    <!--
-    <footer>
-       OpenSplice | DDS
-    </footer>
-    -->
 
 </div>
 </body>
