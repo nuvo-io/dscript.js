@@ -18,7 +18,7 @@ if (typeof exports isnt 'undefined')
 else
   root.jshapes = jshapes
 
-dscriptServer = 'ws://192.168.0.38:9990'
+dscriptServer = 'ws://54.229.92.216:9000'
 
 runtime = new dds.Runtime(dscriptServer)
 
