@@ -1,0 +1,178 @@
+
+/*
+ * Input Fields settings
+ */
+ /*
+  * ORANGE = ff3030
+  * RED = #ff3030
+  */
+ 
+label, nav  {
+    text-align: right;
+    width: 100px;
+    float: left;
+    margin-right: 5px;
+    font-family:Helvetica;
+    font-size: 13px;
+	color: #ffffff
+}
+
+input {
+    margin-top: 2px;
+    padding-top: 2px;
+    margin-right: 5px;
+    margin-left: 5px;
+}
+
+fieldset {
+    margin-top: 5px;
+}
+
+/*************************************/
+header, footer, aside, nav, article {  
+    display: block;
+    text-align: justify;
+}  
+
+body {
+	background-color: #999999; /* #CCCCCC; */
+	font-family:Geneva,Arial,Helvetica,sans-serif;
+	margin: 0px auto;
+	max-width:1100px;
+	border:solid;
+	border-color: #660000; /* #CCCCCC; */
+	color: #ffffff
+}
+
+header {
+	background-color: #999999; /* #336699; #333333;*/
+	display:block;
+	color:#FFFFFF;
+	text-align:center;
+	width:100%;
+	padding: 15px;
+}
+
+h1 {
+	font-size: 59px;
+	margin: 0px;
+}
+
+h2 {
+	font-size: 24px;
+	margin: 0px;
+	text-align:center;
+	color: #ff3030;
+}
+
+h3 {
+	font-size: 18px;
+	margin: 0px;
+	text-align:center;
+	color: #ff3030;
+}
+
+h4 {
+	color: #ff3030;
+	background-color: #fff;
+	-webkit-box-shadow: 2px 2px 20px #888;
+	-webkit-transform: rotate(-45deg);
+	position: absolute;
+	padding: 0px 150px;
+	top: 50px;
+	left: -120px;
+	text-align:center;
+	
+}
+
+header h2 {
+	margin: 0px;
+}
+
+
+
+nav a:link, nav a:visited {
+	display: block;
+	border-bottom: 3px solid #fff;
+	padding: 10px;
+	text-decoration: none;
+	font-weight: bold;
+	margin: 5px;
+}
+
+nav a:hover {
+	color: white;
+	background-color: #ff3030;
+}
+
+nav h3 {
+	margin: 15px;
+	color: white;
+}
+
+nav p {
+	font-family:Geneva,Arial,Helvetica,sans-serif;
+	font-size: 10pt;
+	color: #FFFFFF;
+}
+
+nav {
+    display:block;
+    text-align: right;
+    width:250px;
+    float:left;
+    padding-top:15px;
+    padding-left: 15px;
+}
+#container {
+	background-color: #999999; /*#CCCCCC; */
+}
+
+section {
+
+	display:block;
+	width:50%;
+	float:left;
+	padding-top:15px;
+	padding-left: 10px;
+	padding-bottom: 20px;
+}
+
+article {
+	background-color: #333333; /* #eee; */
+	width: 501px;
+	display:block;
+	margin: 10px;
+	padding: 10px;
+	-webkit-border-radius: 10px;
+	-moz-border-radius: 10px;
+	border-radius: 10px;
+}
+
+article h2 {
+}
+
+aside {
+	display:block;
+	width:280px;
+	float:left;
+}
+
+footer {
+	clear: both;	
+	display: block;
+	background-color: #333333; /*  #336699; /* #333333; */
+	color:#FFFFFF;
+	text-align:center;
+	padding: 15px;
+}
+
+
+/* links */
+a {
+	color: #ff3030;
+}
+
+a:hover {
+	text-decoration: underline;
+}
