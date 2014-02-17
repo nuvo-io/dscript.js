@@ -17,7 +17,7 @@ if (typeof exports isnt 'undefined')
 else
   root.jshapes = jshapes
 
-dscriptServer = 'ws://54.229.92.216:9000'
+dscriptServer = 'ws://10.0.0.6:9000'
 
 runtime = new dds.Runtime(dscriptServer)
 
@@ -46,7 +46,7 @@ runtime.ondisconnect = () ->
   cb.onclick = connect
 
 connect = () ->
-  runtime.connect(dsconf.dscriptServer)
+  runtime.connect()
 
 disconnect = () ->
   runtime.disconnect()
@@ -399,10 +399,7 @@ subscribeTopic = () ->
     inTriangleCache = new dds.Some(new dds.DataCache(history))
     inTriangleCache.map((c) -> bindShape(triangleDR, c))
 
-root.document.getElementById("connectBtn").onclick = connect
 
-root.document.getElementById("subscribeBtn").onclick=subscribeTopic
-root.document.getElementById("publishBtn").onclick=publishTopic
 
 runJShapes = () ->
   setInterval("animate()", JShapesProperties.refresh)
@@ -439,4 +436,9 @@ this.connect = connect
 this.disconnect = disconnect
 this.clearTopicPubSub = clearTopicPubSub
 this.window.onload = () -> runJShapes()
+
+root.document.getElementById("connectBtn").onclick = this.connect
+root.document.getElementById("subscribeBtn").onclick = this.subscribeTopic
+root.document.getElementById("publishBtn").onclick = this.publishTopic
+root.document.getElementById("clearTPSBtn").onclick = this.clearTopicPubSub
 

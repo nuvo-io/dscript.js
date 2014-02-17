@@ -26,14 +26,13 @@
     root.jshapes = jshapes;
   }
 
-  dscriptServer = 'ws://10.100.1.247:9000';
+  dscriptServer = 'ws://10.0.0.6:9000';
 
   runtime = new dds.Runtime(dscriptServer);
 
   runtime.ondisconnect = function(e) {
     var pb, sb;
     sb = root.document.getElementById("subscribeBtn");
-    console.log("Enabling " + sb);
     sb.disabled = true;
     pb = root.document.getElementById("publishBtn");
     pb.disabled = true;
@@ -61,7 +60,7 @@
   };
 
   connect = function() {
-    return runtime.connect(dsconf.dscriptServer);
+    return runtime.connect();
   };
 
   disconnect = function() {
@@ -595,5 +594,13 @@
   this.window.onload = function() {
     return runJShapes();
   };
+
+  root.document.getElementById("connectBtn").onclick = this.connect;
+
+  root.document.getElementById("subscribeBtn").onclick = this.subscribeTopic;
+
+  root.document.getElementById("publishBtn").onclick = this.publishTopic;
+
+  root.document.getElementById("clearTPSBtn").onclick = this.clearTopicPubSub;
 
 }).call(this);
