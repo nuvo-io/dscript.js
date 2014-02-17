@@ -26,7 +26,7 @@
     root.jshapes = jshapes;
   }
 
-  dscriptServer = 'ws://54.229.92.216:9000';
+  dscriptServer = 'ws://10.100.1.247:9000';
 
   runtime = new dds.Runtime(dscriptServer);
 

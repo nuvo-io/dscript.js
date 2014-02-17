@@ -6,7 +6,6 @@
 
    For information contact angelo@icorsaro.net
 ###
-
 root = this
 
 jshapes = {}
@@ -24,7 +23,6 @@ runtime = new dds.Runtime(dscriptServer)
 
 runtime.ondisconnect = (e) ->
   sb = root.document.getElementById("subscribeBtn")
-  console.log("Enabling #{sb}")
   sb.disabled = true
   pb = root.document.getElementById("publishBtn")
   pb.disabled = true
@@ -401,6 +399,10 @@ subscribeTopic = () ->
     inTriangleCache = new dds.Some(new dds.DataCache(history))
     inTriangleCache.map((c) -> bindShape(triangleDR, c))
 
+root.document.getElementById("connectBtn").onclick = connect
+
+root.document.getElementById("subscribeBtn").onclick=subscribeTopic
+root.document.getElementById("publishBtn").onclick=publishTopic
 
 runJShapes = () ->
   setInterval("animate()", JShapesProperties.refresh)

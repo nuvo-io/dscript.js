@@ -29,7 +29,7 @@
 
   state = BEGIN;
 
-  dscriptServer = "ws://192.168.0.38:9990";
+  dscriptServer = "ws://54.229.92.216:9000";
 
   Point = (function() {
     function Point(x, y) {
